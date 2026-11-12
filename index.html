@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jericho Residences · Parking Management</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#e9edf6;background:#0c111b;font-size:14px}*{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer;border:1px solid #43516c;background:#26354d;color:#f0f4fe;padding:9px 12px;border-radius:9px}button:hover:not(:disabled){background:#355072}button:disabled{opacity:.45;cursor:not-allowed}button.primary{background:#3468e6;border-color:#3468e6}button.primary:hover{background:#2556cb}button.danger{border-color:#8c4350;background:#592a34}.subtle{background:transparent;border-color:#33445d}.hidden{display:none!important}h1,h2,h3,p{margin-top:0}h1{font-size:20px;margin-bottom:4px}h2{font-size:16px}h3{font-size:14px}small,.muted{color:#a7b4c9}.muted{line-height:1.55}.notice{border-radius:10px;padding:11px 13px;background:#2c291c;color:#f6dca5;border:1px solid #705a2f;font-size:12px;line-height:1.55}.good{color:#7ee0aa}.error{color:#ffb4c0}.okbox{border:1px solid #266b4d;background:#123b2d;padding:10px;border-radius:8px;color:#abf1cb}.errorbox{border:1px solid #803a4b;background:#3a1c28;padding:10px;border-radius:8px;color:#ffd5db}.app-header{padding:16px 24px;border-bottom:1px solid #26344b;display:flex;align-items:center;gap:18px;justify-content:space-between;flex-wrap:wrap}.brand span{color:#86a7fc}.right-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pill{background:#1f354d;color:#a9d1ff;border-radius:999px;padding:5px 10px;font-size:12px}.shell{max-width:1480px;margin:auto;padding:16px}.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}.tabs button.active{background:#3468e6;border-color:#3468e6}.card{background:#151e2d;border:1px solid #29384f;border-radius:14px;padding:16px}.map-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar input{flex:1;min-width:150px}.toolbar select{width:180px}.field{width:100%;background:#0e1725;border:1px solid #3b4c66;border-radius:8px;padding:10px;color:#f8fbff;min-height:39px}textarea.field{resize:vertical;min-height:70px}label{display:block;font-size:12px;color:#b5c2d6;margin:12px 0 5px}.mapwrap{position:relative;max-width:670px;margin:auto;border-radius:10px;overflow:hidden;background:#eff0f2}.mapwrap img{width:100%;display:block}.mapwrap svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none}.spot{stroke:#fff;stroke-width:1;cursor:pointer;opacity:.95}.spot:focus{outline:none;stroke:#111827;stroke-width:3}.spot.selected{stroke:#131a27;stroke-width:3}.guides{pointer-events:none;opacity:.55}.area-outline{fill-opacity:.14;stroke-width:2;stroke-dasharray:6 3;cursor:move;touch-action:none}.area-handle{fill:#fff;stroke:#172033;stroke-width:2;cursor:grab;touch-action:none}.area-label{font-size:12px;font-weight:800;fill:#111827;pointer-events:none}.legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0 3px;color:#c3d0e4;font-size:12px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.stat{border-radius:10px;background:#111a28;padding:11px}.stat strong{display:block;font-size:22px}.stat span{font-size:11px;color:#a8b5ca}.editor-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}.checkline{display:flex;align-items:center;gap:7px;font-size:12px;color:#bcc9de;margin:12px 0}.checkline input{accent-color:#5181ef}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{min-width:0}.tag{background:#273951;border:1px solid #3c4e67;border-radius:999px;padding:5px 8px;font-size:11px;color:#d3e4ff}.stack{display:grid;gap:12px}.simple-table{width:100%;border-collapse:collapse;font-size:13px}.simple-table th{text-align:left;font-size:12px;color:#a9b9d2;font-weight:600}.simple-table th,.simple-table td{padding:12px 9px;border-bottom:1px solid #2b3a51}.table-scroll{overflow-x:auto}.section-name{font-size:12px;color:#afbdd2}.auth-page{min-height:85vh;display:grid;place-items:center;padding:20px}.auth-card{width:min(100%,420px)}.auth-card h2{font-size:24px}.section{margin-top:18px;padding-top:15px;border-top:1px solid #304058}.empty{padding:32px 12px;text-align:center;color:#b1bfd4}.tool-help{font-size:12px;color:#b2c0d5;line-height:1.6;margin:11px 0 0}.footer{color:#8d9bb0;font-size:12px;padding-top:10px}.spinner{opacity:.7}@media(max-width:880px){.map-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.app-header{padding:12px 16px}.shell{padding:12px}}@media(max-width:470px){.toolbar select{width:100%}}
+</style></head>
+<body>
+<header class="app-header"><div class="brand"><h1>Jericho Residences <span>/ Parking Manager</span></h1><small>Secure staff parking management · Property map</small></div><div class="right-header"><span id="connectionLabel" class="pill">Not connected</span><span id="userLabel" class="muted hidden"></span><button id="logout" class="hidden">Log out</button></div></header>
+<div id="setupPage" class="auth-page hidden"><div class="card auth-card"><h2>Connect Supabase</h2><p class="muted">Open <code>config.js</code> and paste your Supabase Project URL and Publishable key. Do not paste a secret or service-role key.</p><div class="notice">The parking map is not connected until those two values are filled in. See <code>README.md</code>.</div></div></div>
+<div id="loginPage" class="auth-page hidden"><form class="card auth-card" id="loginForm"><h2>Employee sign in</h2><p class="muted">Use the work account created or invited by management.</p><label for="loginEmail">Work email</label><input class="field" type="email" id="loginEmail" autocomplete="email" required><label for="loginPassword">Password</label><input class="field" type="password" id="loginPassword" autocomplete="current-password" required><div class="editor-actions"><button class="primary" type="submit" id="loginSubmit">Sign in</button></div><p id="loginMsg" role="status"></p></form></div>
+<div id="appPage" class="shell hidden">
+<div class="tabs"><button data-page="map" class="active">Property map</button><button data-page="assignments">Assignments</button><button data-page="history" class="manager-only">History</button><button data-page="team" class="manager-only">Employee access</button></div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
+<section id="pageMap"><div class="map-grid"><div class="card"><div id="stats" class="stats"></div><div class="toolbar"><input class="field" id="search" placeholder="Search spot #, apartment, notes"><select class="field" id="sectionFilter"><option value="all">All sections</option><option value="P1">Page 1 · South</option><option value="P2">Page 2 · West</option><option value="P3">Page 3 · Northwest</option><option value="P4">Page 4 · Upper</option></select><button id="refresh">Refresh</button><button id="placeSpot" class="manager-only">+ Place space</button><button id="exportCsv">Export CSV</button></div><div id="p2Reference" class="card" style="display:none;margin:12px 0;padding:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><strong>P2 · West Parking — original section diagram</strong><p class="tool-help" style="margin:5px 0">From the handwritten drawing marked ② (PDF page 3). This is a reference, not a verified digital space inventory. Zoom to read the apartment labels and accessible spaces.</p></div><div style="display:flex;gap:6px;align-items:center"><button type="button" id="p2ZoomOut">−</button><span id="p2ZoomLabel">100%</span><button type="button" id="p2ZoomIn">+</button><button type="button" id="p2ZoomReset">Reset</button></div></div><div style="overflow:auto;max-height:640px;border:1px solid #394b64;border-radius:10px;background:white;margin-top:10px"><img id="p2ReferenceImage" src="p2_reference.png" alt="Original handwritten West parking layout, diagram 2, showing two parking rows and accessible spaces" style="display:block;width:100%;max-width:none;transform-origin:top left"></div><p class="tool-help">To edit a digital space, use the property map below: click the space, enable <b>Move space on map by dragging</b>, drag it, and click <b>Save space</b>. Refresh reloads database data; it does not move spaces.</p></div><div class="mapwrap"><img src="property.png" alt="Jericho property overview"><svg id="parkingMap" viewBox="0 0 436 562" aria-label="Interactive parking spots" role="img"></svg></div><div class="legend"><span><i style="background:#16a34a"></i>Available</span><span><i style="background:#2563eb"></i>Reserved</span><span><i style="background:#d97706"></i>Unavailable</span><span><i style="background:#64748b"></i>Section guides</span></div><label class="checkline"><input type="checkbox" id="showGuides" checked> Show approximate section guides</label><div id="areaEditor" class="manager-only" style="margin-top:12px;padding:12px;border:1px solid #40516b;border-radius:10px">
+<strong>Edit parking area outlines</strong><p class="tool-help">Choose a section, turn on editing, then drag the shaded area to move it or drag its four corner handles to resize it. These outlines are guides, not actual parking spaces.</p>
+<div class="row" style="margin-top:10px"><select id="areaChoice" class="field" style="flex:1"><option value="P1">P1 · South</option><option value="P2">P2 · West</option><option value="P3">P3 · Northwest</option><option value="P4">P4 · Upper</option></select><label class="checkline" style="margin:0"><input id="editAreas" type="checkbox"> Edit outlines</label></div>
+<div class="row" style="margin-top:9px"><button id="saveAreas" class="primary">Save outlines</button><button id="resetArea">Reset selected</button><button id="exportAreas">Export layout</button><button id="importAreas">Import layout</button><input type="file" id="importAreasFile" accept=".json" class="hidden"></div>
+<p id="areaMsg" class="tool-help">Outlines are stored in this browser only, not in Supabase. Export the layout to back it up or transfer it to another computer. Parking spot locations are unchanged.</p></div><p id="mapTip" class="tool-help">This background comes from your original property image. Exact stall locations are not mapped yet. Managers should confirm spots on site before placing them.</p></div>
+<aside class="card"><h2>Space details</h2><p id="selectionText" class="muted">Select a space on the map.</p><div id="spotDetails" class="hidden"><div id="spotSummary" class="row"></div><div class="section" id="assignmentPanel"><h3 id="assignmentTitle">Assign parking</h3><div id="activeAssignment" class="hidden"></div><div id="assignForm"><label for="apartment">Apartment number</label><input id="apartment" class="field" placeholder="e.g. 204" maxlength="40"><label for="assignNotes">Assignment notes (optional)</label><textarea id="assignNotes" class="field" maxlength="2000"></textarea><div class="editor-actions"><button id="assign" class="primary">Assign space</button></div></div><button id="release" class="danger hidden">Release assignment</button><p id="assignmentHelp" class="tool-help"></p></div>
+<div id="managePanel" class="manager-only section"><h3>Manager · Edit physical space</h3><label for="spotNumber">Parking-space ID</label><input id="spotNumber" class="field" placeholder="e.g. P1-001" maxlength="50"><label for="spotSection">Section</label><select id="spotSection" class="field"><option value="P1">Page 1 · South</option><option value="P2">Page 2 · West</option><option value="P3">Page 3 · Northwest</option><option value="P4">Page 4 · Upper</option></select><label for="spotType">Space type</label><select id="spotType" class="field"><option value="standard">Standard</option><option value="accessible">Accessible</option><option value="visitor">Visitor</option><option value="loading">Loading</option><option value="other">Other</option></select><label for="spotStatus">Availability (not reservation)</label><select id="spotStatus" class="field"><option value="available">Available</option><option value="unavailable">Unavailable / not verified</option><option value="reserved">Reserved (use Release to change)</option></select><label for="spotNotes">Space notes</label><textarea id="spotNotes" class="field" maxlength="2000" placeholder="Restrictions, handwritten label, field verification"></textarea><label class="checkline"><input type="checkbox" id="moveSpot"> Move space on map by dragging (manager only)</label><div class="editor-actions"><button class="primary" id="saveSpot">Save space</button><button id="cancelNew" class="hidden">Cancel new space</button></div><p class="tool-help">Use the space's physical ID here—not its apartment number. Spaces remain in the central database and updates are audited.</p></div></div>
+<div id="noSelectionNote" class="notice">Spaces have not yet been fully transferred from the handwritten diagrams. Never make a real assignment until the location and label have been checked.</div></aside></div></section>
+<section id="pageAssignments" class="card hidden"><div class="row" style="justify-content:space-between"><div><h2>Active parking assignments</h2><p class="muted">Shared records from Supabase.</p></div><button id="refreshAssignments">Refresh assignments</button></div><div class="table-scroll"><table class="simple-table"><thead><tr><th>Parking space</th><th>Section</th><th>Apartment</th><th>Assigned at</th><th>Action</th></tr></thead><tbody id="assignmentRows"></tbody></table></div></section>
+<section id="pageHistory" class="card hidden"><h2>Manager · Activity history</h2><p class="muted">Latest 100 actions, newest first. Only managers can read these logs.</p><div class="table-scroll"><table class="simple-table"><thead><tr><th>Time</th><th>Action</th><th>Actor ID</th><th>Details</th></tr></thead><tbody id="historyRows"></tbody></table></div></section>
+<section id="pageTeam" class="card hidden"><h2>Manager · Invite employees</h2><p class="muted">Only managers can invite new employee accounts. The invitation is sent through a protected Supabase Edge Function, not the browser.</p><label for="inviteEmail">Employee work email</label><div class="row"><input id="inviteEmail" class="field" style="max-width:380px" type="email" placeholder="employee@company.com"><button id="inviteBtn" class="primary">Email invitation</button></div><p class="tool-help">Deploy the included <code>edge-functions/invite-employee</code> function before inviting staff. The invited person will receive an email to set a password. If the function is not deployed, an error will appear; no account will be created by this website.</p><h3 class="section">Active staff</h3><div class="table-scroll"><table class="simple-table"><thead><tr><th>Email</th><th>Role</th><th>Active</th></tr></thead><tbody id="teamRows"></tbody></table></div></section>
+<div class="footer">Jericho Residences · Staff-only application · Data is stored centrally in Supabase once connected · Refreshes about every 15 seconds while this page is open</div>
+</div>
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const $=id=>document.getElementById(id), C=window.JERICHO_CONFIG||{};
+const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(C.supabaseUrl||'') && /^(sb_publishable_|eyJ)/.test(C.supabasePublishableKey||'');
+let client,session=null,profile=null,spots=[],assignments=[],logs=[],team=[],selectedId=null,creating=null,dragging=false,placeMode=false,view='map',loading=false;
+const sections={P1:'South',P2:'West',P3:'Northwest',P4:'Upper'},colors={available:'#16a34a',reserved:'#2563eb',unavailable:'#d97706'};
+function show(id,on=true){$(id).classList.toggle('hidden',!on)}
+function toast(message,error=false){let e=$('toast');e.className=error?'errorbox':'okbox';e.textContent=message;show('toast');clearTimeout(toast._t);toast._t=setTimeout(()=>show('toast',false),6500)}
+function manager(){return profile?.role==='manager' && profile?.active===true}
+function staff(){return profile?.active===true && ['manager','employee'].includes(profile?.role)}
+function hidePrivate(){show('appPage',false);show('loginPage',false);show('setupPage',false)}
+function safeText(v){return String(v??'')}
+function stamp(s){return s?new Date(s).toLocaleString():'—'}
+function el(tag,text,cls){let x=document.createElement(tag);if(text!=null)x.textContent=safeText(text);if(cls)x.className=cls;return x}
+function svgEl(name,attrs){let e=document.createElementNS('http://www.w3.org/2000/svg',name);for(let [k,v] of Object.entries(attrs))e.setAttribute(k,v);return e}
+function selectedSpot(){return spots.find(s=>s.id===selectedId)||null}
+function activeFor(id){return assignments.find(a=>a.spot_id===id && !a.released_at)}
+function titleFor(id){return spots.find(s=>s.id===id)?.spot_number||id}
+async function connection(){
+ if(!configured){hidePrivate();show('setupPage');return}
+ client=createClient(C.supabaseUrl.replace(/\/$/,''),C.supabasePublishableKey,{auth:{autoRefreshToken:true,persistSession:true}});
+ $('connectionLabel').textContent='Supabase connected';
+ const result=await client.auth.getSession();
+ await enterSession(result.data.session);
+ client.auth.onAuthStateChange((_event,newSession)=>{if((newSession?.user?.id||null)!==(session?.user?.id||null))setTimeout(()=>enterSession(newSession),0)});
+ setInterval(()=>{if(staff()&&!document.hidden)loadData(true)},15000);
+}
+async function enterSession(next){
+ session=next;profile=null;spots=[];assignments=[];logs=[];team=[];selectedId=null;creating=null;
+ hidePrivate();show('logout',!!next);
+ if(!next){$('userLabel').textContent='';show('userLabel',false);show('loginPage');return}
+ try{
+  const {data,error}=await client.from('profiles').select('id,email,role,active').eq('id',next.user.id).single();
+  if(error||!data||!data.active)throw Error('No active staff profile is assigned to this account. Ask your manager.');
+  profile=data;$('userLabel').textContent=`${data.email} · ${data.role}`;show('userLabel');
+  document.querySelectorAll('.manager-only').forEach(x=>x.classList.toggle('hidden',!manager()));
+  show('appPage');switchPage('map');await loadData(false);
+ }catch(e){hidePrivate();show('loginPage');$('loginMsg').textContent=e.message||'Unable to load your staff role';$('loginMsg').className='error';}
+}
+$('loginForm').onsubmit=async e=>{e.preventDefault();$('loginSubmit').disabled=true;$('loginMsg').textContent='Signing in…';const {error}=await client.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error){$('loginMsg').textContent=error.message;$('loginMsg').className='error'}else{$('loginMsg').textContent='Signed in. Loading map…';const {data}=await client.auth.getSession();await enterSession(data.session)}$('loginSubmit').disabled=false};
+$('logout').onclick=async()=>{await client.auth.signOut();await enterSession(null)};
+async function loadData(silent){
+ if(!staff()||loading)return;loading=true;try{
+  const [s,a]=await Promise.all([client.from('parking_spots').select('id,spot_number,section,spot_type,status,map_x,map_y,notes').order('section').order('spot_number'),client.from('assignments').select('id,spot_id,apartment_number,notes,assigned_at,released_at').is('released_at',null).order('assigned_at',{ascending:false})]);
+  if(s.error)throw s.error;if(a.error)throw a.error;spots=s.data||[];assignments=a.data||[];
+  if(selectedId&&!selectedSpot()){selectedId=null;show('spotDetails',false)}
+  renderMap();renderAssignments();if(selectedId||creating)renderDetails();
+  if(manager()&&view==='history')await loadLogs();if(manager()&&view==='team')await loadTeam();
+  if(!silent)toast('Parking data loaded from Supabase');
+ }catch(e){toast('Could not load parking data: '+e.message,true)}finally{loading=false}
+}
+function switchPage(p){if((p==='history'||p==='team')&&!manager())return;view=p;['map','assignments','history','team'].forEach(x=>show('page'+x[0].toUpperCase()+x.slice(1),x===p));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));if(p==='history')loadLogs();if(p==='team')loadTeam()}
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>switchPage(b.dataset.page));
+
+// Editable area outlines: browser-local visual annotations, NOT database parking spaces.
+const areaDefaults={P1:{x:85,y:480,w:260,h:44},P2:{x:43,y:180,w:43,h:260},P3:{x:29,y:155,w:64,h:128},P4:{x:210,y:32,w:54,h:116}};
+const areaStorageKey='jericho-area-outlines-v1';
+function validArea(v){return v&&['x','y','w','h'].every(k=>Number.isFinite(v[k]))&&v.x>=0&&v.y>=0&&v.w>=12&&v.h>=12&&v.x+v.w<=436.01&&v.y+v.h<=562.01}
+function readAreas(){try{let v=JSON.parse(localStorage.getItem(areaStorageKey));if(v&&Object.keys(areaDefaults).every(k=>validArea(v[k])))return v}catch{}return structuredClone(areaDefaults)}
+let areaBoxes=readAreas(),areaDirty=false,areaDrag=null;
+function areaNote(msg){$('areaMsg').textContent=msg}
+function areaPoint(e){return mousePoint(e)}
+function drawAreaGuides(svg){
+ for(const name of Object.keys(areaDefaults)){
+  const b=areaBoxes[name],active=manager()&&$('editAreas').checked&&$('areaChoice').value===name;
+  const g=svgEl('rect',{x:b.x,y:b.y,width:b.w,height:b.h,rx:3,fill:active?'#60a5fa':'#64748b',stroke:active?'#2563eb':'#64748b',class:active?'area-outline':'guides'});
+  svg.append(g);
+  const label=svgEl('text',{x:b.x+4,y:b.y+13,class:active?'area-label':'guides','font-size':'11',fill:'#293344'});label.textContent=name;svg.append(label);
+  if(!active)continue;
+  function startDrag(e,corner){e.preventDefault();e.stopPropagation();areaDrag={name,corner,origin:structuredClone(b),start:areaPoint(e),pointerId:e.pointerId};e.currentTarget.setPointerCapture(e.pointerId)}
+  g.addEventListener('pointerdown',e=>startDrag(e,'move'));
+  for(const [corner,cx,cy] of [['tl',b.x,b.y],['tr',b.x+b.w,b.y],['bl',b.x,b.y+b.h],['br',b.x+b.w,b.y+b.h]]){
+   let h=svgEl('circle',{cx,cy,r:5,class:'area-handle'});
+   h.addEventListener('pointerdown',e=>startDrag(e,corner));svg.append(h);
+  }
+ }
+}
+window.addEventListener('pointermove',e=>{
+ if(!areaDrag)return;
+ const d=areaDrag,now=areaPoint(e),dx=now.x-d.start.x,dy=now.y-d.start.y,o=d.origin;
+ let left=o.x,right=o.x+o.w,top=o.y,bottom=o.y+o.h;
+ if(d.corner==='move'){left=Math.max(0,Math.min(436-o.w,o.x+dx));top=Math.max(0,Math.min(562-o.h,o.y+dy));right=left+o.w;bottom=top+o.h}
+ else {
+  if(d.corner.includes('l'))left=Math.max(0,Math.min(right-12,o.x+dx));
+  if(d.corner.includes('r'))right=Math.min(436,Math.max(left+12,o.x+o.w+dx));
+  if(d.corner.includes('t'))top=Math.max(0,Math.min(bottom-12,o.y+dy));
+  if(d.corner.includes('b'))bottom=Math.min(562,Math.max(top+12,o.y+o.h+dy));
+ }
+ areaBoxes[d.name]={x:left,y:top,w:right-left,h:bottom-top};
+ areaDirty=true;renderMap();
+});
+function finishAreaDrag(){if(areaDrag){areaDrag=null;areaNote('Outline changed. Click Save outlines to keep it in this browser.');renderMap()}}
+window.addEventListener('pointerup',finishAreaDrag);
+window.addEventListener('pointercancel',finishAreaDrag);
+$('areaChoice').onchange=()=>{$('sectionFilter').value=$('areaChoice').value;updateP2Reference();renderMap()};
+$('editAreas').onchange=()=>{if($('editAreas').checked){$('showGuides').checked=true;placeMode=false;creating=null;selectedId=null;renderDetails()}renderMap()};
+$('saveAreas').onclick=()=>{if(!manager())return;localStorage.setItem(areaStorageKey,JSON.stringify(areaBoxes));areaDirty=false;areaNote('Saved in this browser. Export layout for backup or to use on another computer.')};
+$('resetArea').onclick=()=>{if(!manager())return;let k=$('areaChoice').value;if(!confirm('Reset the '+k+' outline to its original approximate position?'))return;areaBoxes[k]=structuredClone(areaDefaults[k]);areaDirty=true;areaNote('Outline reset. Click Save outlines to keep the change.');renderMap()};
+$('exportAreas').onclick=()=>{let blob=new Blob([JSON.stringify({version:1,areas:areaBoxes},null,2)],{type:'application/json'});let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='jericho-area-outlines.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)};
+$('importAreas').onclick=()=>$('importAreasFile').click();
+$('importAreasFile').onchange=async e=>{let file=e.target.files?.[0];if(!file)return;try{let data=JSON.parse(await file.text());if(!data.areas||!Object.keys(areaDefaults).every(k=>validArea(data.areas[k])))throw Error('Invalid area layout');areaBoxes=Object.fromEntries(Object.keys(areaDefaults).map(k=>[k,data.areas[k]]));areaDirty=true;renderMap();areaNote('Imported outlines. Click Save outlines to keep them.')}catch(err){areaNote('Import failed: '+err.message)}e.target.value=''};
+function renderMap(){
+ const svg=$('parkingMap');svg.replaceChildren();const f=$('sectionFilter').value,q=$('search').value.trim().toLowerCase();
+ if($('showGuides').checked)drawAreaGuides(svg);
+
+ for(const s of spots){const a=activeFor(s.id);if(f!=='all'&&s.section!==f)continue;if(q&&![s.spot_number,s.section,s.notes,s.spot_type,a?.apartment_number].some(v=>safeText(v).toLowerCase().includes(q)))continue;
+  if(s.map_x===null||s.map_y===null)continue;
+  const x=Number(s.map_x)*4.36,y=Number(s.map_y)*5.62;const rect=svgEl('rect',{x:x-6,y:y-4,width:12,height:8,rx:1,fill:colors[s.status]||'#64748b',class:'spot'+(s.id===selectedId?' selected':''),tabindex:'0',role:'button','aria-label':`Space ${s.spot_number}, ${s.status}`});
+  const t=svgEl('title',{});t.textContent=`${s.spot_number}: ${s.status}${a?' · Apartment '+a.apartment_number:''}`;rect.append(t);
+  rect.addEventListener('pointerdown',e=>{if(placeMode)return;if(manager()&&selectedId===s.id&&$('moveSpot').checked){dragging=true;rect.setPointerCapture(e.pointerId)}else{selectSpot(s.id)}});
+  rect.addEventListener('pointermove',e=>{if(!dragging||selectedId!==s.id)return;let p=mousePoint(e);creating=null;s.map_x=Math.max(0,Math.min(100,p.x/4.36));s.map_y=Math.max(0,Math.min(100,p.y/5.62));rect.setAttribute('x',Number(s.map_x)*4.36-6);rect.setAttribute('y',Number(s.map_y)*5.62-4)});
+  rect.addEventListener('pointerup',()=>{if(dragging){dragging=false;toast('Position moved locally. Click Save space to store it.')}});
+  rect.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectSpot(s.id)}});
+  svg.append(rect);
+ }
+ if(creating){let r=svgEl('rect',{x:creating.map_x*4.36-6,y:creating.map_y*5.62-4,width:12,height:8,rx:1,stroke:'#fff','stroke-width':2,fill:'#f59e0b'});svg.append(r)}
+ const total=spots.length,reserved=spots.filter(s=>s.status==='reserved').length,available=spots.filter(s=>s.status==='available').length,unavailable=spots.filter(s=>s.status==='unavailable').length;
+ $('stats').replaceChildren(...[[total,'Total mapped'],[available,'Available'],[reserved,'Reserved'],[unavailable,'Unavailable']].map(([n,label])=>{let d=el('div',null,'stat');d.append(el('strong',n),el('span',label));return d}));
+ $('mapTip').textContent=placeMode?'Click the property map to set the center of a new space. Select the correct section, then Save space.':'Approximate section outlines are guides only. Physical stall positions and existing assignments must be verified against your original diagrams and on site.';
+}
+function mousePoint(e){let p=$('parkingMap').createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform($('parkingMap').getScreenCTM().inverse())}
+$('parkingMap').addEventListener('pointerdown',e=>{if(!manager()||!placeMode||$('editAreas').checked||e.target.closest('.spot'))return;let p=mousePoint(e);creating={spot_number:'',section:$('sectionFilter').value==='all'?'P1':$('sectionFilter').value,spot_type:'standard',status:'unavailable',map_x:Math.max(0,Math.min(100,p.x/4.36)),map_y:Math.max(0,Math.min(100,p.y/5.62)),notes:'UNVERIFIED — confirm physical spot on site'};selectedId=null;placeMode=false;$('placeSpot').textContent='+ Place space';renderMap();renderDetails()});
+$('placeSpot').onclick=()=>{placeMode=!placeMode;creating=null;selectedId=null;show('spotDetails',false);$('placeSpot').textContent=placeMode?'Cancel placement':'+ Place space';renderMap()};
+$('showGuides').onchange=renderMap;$('search').oninput=renderMap;$('sectionFilter').onchange=()=>{renderMap();updateP2Reference()};$('refresh').onclick=()=>loadData(false);
+let p2Zoom=100;function updateP2Reference(){const shown=$('sectionFilter').value==='P2';$('p2Reference').style.display=shown?'block':'none'}
+function setP2Zoom(value){p2Zoom=Math.max(50,Math.min(250,value));$('p2ReferenceImage').style.width=p2Zoom+'%';$('p2ZoomLabel').textContent=p2Zoom+'%'}
+$('p2ZoomIn').onclick=()=>setP2Zoom(p2Zoom+25);$('p2ZoomOut').onclick=()=>setP2Zoom(p2Zoom-25);$('p2ZoomReset').onclick=()=>setP2Zoom(100);updateP2Reference();
+function selectSpot(id){selectedId=id;creating=null;placeMode=false;$('placeSpot').textContent='+ Place space';renderMap();renderDetails()}
+function renderDetails(){let s=creating||selectedSpot();show('spotDetails',!!s);show('noSelectionNote',!s);if(!s){$('selectionText').textContent='Select a space on the map.';return}
+ $('selectionText').textContent=creating?'New parking space (not yet saved)':`Space ${s.spot_number}`;
+ const summary=$('spotSummary');summary.replaceChildren();summary.append(el('strong',s.spot_number||'New space'),el('span',`${sections[s.section]||s.section} · ${s.status}`,'tag'));
+ const a=creating?null:activeFor(s.id);show('assignmentPanel',!creating);show('activeAssignment',!!a);show('assignForm',!a&&s.status==='available');show('release',!!a);$('assignmentTitle').textContent=a?'Current assignment':'Assign parking';
+ $('activeAssignment').replaceChildren();if(a){$('activeAssignment').append(el('p',`Apartment ${a.apartment_number} · ${stamp(a.assigned_at)}`));if(a.notes)$('activeAssignment').append(el('p',a.notes,'muted'))}
+ $('assignmentHelp').textContent=s.status==='unavailable'?'This space is unavailable. A manager must verify and enable it before it can be assigned.':s.spot_type==='visitor'||s.spot_type==='loading'?'Visitor and loading spaces cannot be reserved for apartments.':'';
+ $('assign').disabled=s.spot_type==='visitor'||s.spot_type==='loading';
+ if(manager()){
+  $('spotNumber').value=s.spot_number||'';$('spotSection').value=s.section;$('spotType').value=s.spot_type;$('spotStatus').value=s.status;$('spotStatus').disabled=s.status==='reserved';$('spotNotes').value=s.notes||'';$('moveSpot').checked=false;show('cancelNew',!!creating);
+ }
+}
+$('assign').onclick=async()=>{const s=selectedSpot();if(!s||s.status!=='available')return;let apartment=$('apartment').value.trim();if(!apartment)return toast('Enter the apartment number',true);if(!confirm(`Assign physical spot ${s.spot_number} to apartment ${apartment}?`))return;
+ await rpcAction('assign_parking_spot',{p_spot_id:s.id,p_apartment_number:apartment,p_notes:$('assignNotes').value.trim()||null},'Spot reserved');$('apartment').value='';$('assignNotes').value=''};
+$('release').onclick=async()=>{const s=selectedSpot();const a=s&&activeFor(s.id);if(!a||!confirm(`Release ${s.spot_number} from apartment ${a.apartment_number}?`))return;await rpcAction('release_parking_spot',{p_spot_id:s.id},'Assignment released')};
+async function rpcAction(name,args,success){try{const {error}=await client.rpc(name,args);if(error)throw error;toast(success);await loadData(true)}catch(e){toast('Action not saved: '+e.message,true)}}
+$('saveSpot').onclick=async()=>{
+ if(!manager())return;const s=creating||selectedSpot();if(!s)return;
+ const number=$('spotNumber').value.trim(),section=$('spotSection').value,type=$('spotType').value,status=$('spotStatus').value,notes=$('spotNotes').value.trim()||null;
+ if(!number)return toast('A physical space ID is required',true);
+ if(spots.some(other=>other.id!==s.id&&other.spot_number===number))return toast('That space ID is already in use',true);
+ const params={p_spot_number:number,p_section:section,p_spot_type:type,p_status:status,p_map_x:Number(s.map_x),p_map_y:Number(s.map_y),p_notes:notes};
+ const isNew=!!creating;const fn=isNew?'manager_create_spot':'manager_update_spot';if(!isNew)params.p_spot_id=s.id;
+ try{const {data,error}=await client.rpc(fn,params);if(error)throw error;selectedId=isNew?data:s.id;creating=null;toast('Space saved to shared database');await loadData(true)}catch(e){toast('Could not save space: '+e.message,true)}
+};
+$('cancelNew').onclick=()=>{creating=null;selectedId=null;renderMap();renderDetails()};
+function renderAssignments(){const rows=$('assignmentRows');rows.replaceChildren();if(!assignments.length){let tr=el('tr'),td=el('td','No active assignments yet.');td.colSpan=5;tr.append(td);rows.append(tr);return}
+ for(const a of assignments){let s=spots.find(s=>s.id===a.spot_id);let tr=el('tr');[s?.spot_number||'Unknown',s?sections[s.section]: '—',a.apartment_number,stamp(a.assigned_at)].forEach(v=>tr.append(el('td',v)));let td=el('td'),b=el('button','View on map');b.onclick=()=>{switchPage('map');$('search').value='';$('sectionFilter').value='all';selectSpot(a.spot_id)};td.append(b);tr.append(td);rows.append(tr)}
+}
+$('refreshAssignments').onclick=()=>loadData(false);
+async function loadLogs(){if(!manager())return;const {data,error}=await client.from('activity_logs').select('occurred_at,action,actor_id,details').order('occurred_at',{ascending:false}).limit(100);if(error)return toast(error.message,true);logs=data||[];let rows=$('historyRows');rows.replaceChildren();if(!logs.length){let tr=el('tr'),td=el('td','No activity yet');td.colSpan=4;tr.append(td);rows.append(tr)}for(let x of logs){let tr=el('tr');[stamp(x.occurred_at),x.action,x.actor_id||'—',JSON.stringify(x.details)].forEach(v=>tr.append(el('td',v)));rows.append(tr)}}
+async function loadTeam(){if(!manager())return;const {data,error}=await client.from('profiles').select('email,role,active').order('email');if(error)return toast(error.message,true);team=data||[];let rows=$('teamRows');rows.replaceChildren();for(let x of team){let tr=el('tr');[x.email,x.role,x.active?'Yes':'No'].forEach(v=>tr.append(el('td',v)));rows.append(tr)}}
+$('inviteBtn').onclick=async()=>{if(!manager())return;const email=$('inviteEmail').value.trim();if(!email)return toast('Enter an employee email',true);if(!confirm(`Send an employee invitation to ${email}?`))return;
+ $('inviteBtn').disabled=true;try{const {data,error}=await client.functions.invoke('invite-employee',{body:{email}});if(error)throw error;if(!data?.success)throw Error(data?.error||'Invitation did not complete');toast(`Invitation sent to ${email}`);$('inviteEmail').value='';await loadTeam()}catch(e){toast('Invitation not sent: '+e.message+'. Verify that the Edge Function has been deployed.',true)}finally{$('inviteBtn').disabled=false}};
+function csvValue(v){let s=safeText(v);if(/^[\s]*[=+\-@]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"'}
+$('exportCsv').onclick=()=>{let keys=['spot_number','section','spot_type','status','apartment_number','notes','map_x','map_y'];let lines=[keys.join(',')];for(let s of spots){let a=activeFor(s.id);let obj={...s,apartment_number:a?.apartment_number||''};lines.push(keys.map(k=>csvValue(obj[k])).join(','))}let blob=new Blob([lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='jericho-parking-export.csv';a.click();URL.revokeObjectURL(url)};
+connection().catch(e=>{hidePrivate();show('setupPage');$('setupPage').querySelector('.notice').textContent='Could not start Supabase connection: '+e.message});
+</script></body></html>
