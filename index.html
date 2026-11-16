@@ -265,13 +265,13 @@ const jerichoFrame=$('parkingLayoutsFrame');
 async function sendJerichoState(){
  if(!staff()||!jerichoFrame.contentWindow)return;
  const [sr,rr]=await Promise.all([
-  client.from('jericho_spaces').select('id,display_name,geometry,unavailable'),
+  client.from('jericho_spaces').select('id,display_name,geometry,unavailable,spot_type'),
   client.from('jericho_requests').select('spot_id,resident_name,apartment_number,license_plate,notes,status').in('status',['pending','approved'])]);
  if(sr.error||rr.error){toast('Run 04_jericho_278_migration.sql in Supabase before using the new map: '+(sr.error?.message||rr.error?.message),true);return}
- const positions={},spotNames={},unavailable={},records={};
- for(const s of sr.data||[]){if(s.geometry&&Object.keys(s.geometry).length===4)positions[s.id]=s.geometry;if(s.display_name!==s.id)spotNames[s.id]=s.display_name;if(s.unavailable)unavailable[s.id]=true}
+ const positions={},spotNames={},spotTypes={},unavailable={},records={};
+ for(const s of sr.data||[]){if(s.geometry&&Object.keys(s.geometry).length===4)positions[s.id]=s.geometry;if(s.display_name!==s.id)spotNames[s.id]=s.display_name;if(s.spot_type&&s.spot_type!=='standard')spotTypes[s.id]=s.spot_type;if(s.unavailable)unavailable[s.id]=true}
  for(const r of rr.data||[])if(r.status==='approved')records[r.spot_id]={name:r.resident_name,apartment:r.apartment_number,plate:r.license_plate,notes:r.notes,requestStatus:r.status};
- jerichoFrame.contentWindow.postMessage({kind:'jericho-state',role:profile.role,positions,spotNames,unavailable,records},location.origin);
+ jerichoFrame.contentWindow.postMessage({kind:'jericho-state',role:profile.role,positions,spotNames,spotTypes,unavailable,records},location.origin);
 }
 window.addEventListener('message',async e=>{
  if(e.origin!==location.origin||e.source!==jerichoFrame.contentWindow||!staff())return;
@@ -280,16 +280,18 @@ window.addEventListener('message',async e=>{
  const reply=(ok,message)=>jerichoFrame.contentWindow?.postMessage({kind:'jericho-result',ok,message},location.origin);
  if(m.kind==='jericho-save-layout'){
   if(!manager())return reply(false,'Only managers can save layouts.');
-  const positions=m.positions||{},names=m.spotNames||{},unavailable=m.unavailable||{};
-  if(Object.keys(positions).length>278||Object.keys(names).length>278)return reply(false,'Invalid layout size.');
-  const {data:current,error:readErr}=await client.from('jericho_spaces').select('id,display_name,geometry,unavailable');
+  const positions=m.positions||{},names=m.spotNames||{},types=m.spotTypes||{},unavailable=m.unavailable||{};
+  if(Object.keys(positions).length>278||Object.keys(names).length>278||Object.keys(types).length>278)return reply(false,'Invalid layout size.');
+  const {data:current,error:readErr}=await client.from('jericho_spaces').select('id,display_name,geometry,unavailable,spot_type');
   if(readErr)return reply(false,readErr.message);
   for(const row of current||[]){
    const g=positions[row.id];
    if(g && (!['x','y','w','h'].every(k=>Number.isFinite(g[k])&&g[k]>=0&&g[k]<=1448)))return reply(false,'Invalid geometry for '+row.id);
    const label=String(names[row.id]||row.id).trim().slice(0,50);
-   const payload={display_name:label,geometry:g||{},unavailable:!!unavailable[row.id],updated_at:new Date().toISOString()};
-   if(row.display_name===payload.display_name&&JSON.stringify(row.geometry||{})===JSON.stringify(payload.geometry)&&row.unavailable===payload.unavailable)continue;
+   const type=types[row.id]||'standard';
+   if(!['standard','handicap','visitor','reserved'].includes(type))return reply(false,'Invalid space type for '+row.id);
+   const payload={display_name:label,geometry:g||{},spot_type:type,unavailable:!!unavailable[row.id],updated_at:new Date().toISOString()};
+   if(row.display_name===payload.display_name&&JSON.stringify(row.geometry||{})===JSON.stringify(payload.geometry)&&row.unavailable===payload.unavailable&&row.spot_type===payload.spot_type)continue;
    const {error}=await client.from('jericho_spaces').update(payload).eq('id',row.id);
    if(error)return reply(false,'Could not save '+row.id+': '+error.message);
   }
