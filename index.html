@@ -189,6 +189,29 @@ function renderAssignments(){const rows=$('assignmentRows');rows.replaceChildren
  for(const a of assignments){let s=spots.find(s=>s.id===a.spot_id);let tr=el('tr');[s?.spot_number||'Unknown',s?sections[s.section]: '—',a.apartment_number,stamp(a.assigned_at)].forEach(v=>tr.append(el('td',v)));let td=el('td'),b=el('button','View on map');b.onclick=()=>{switchPage('map');$('search').value='';$('sectionFilter').value='all';selectSpot(a.spot_id)};td.append(b);tr.append(td);rows.append(tr)}
 }
 $('refreshAssignments').onclick=()=>loadData(false);
+// History is a display-only view. Keep all underlying audit records in Supabase.
+function historyActionLabel(action){
+ const labels={jericho_assignment_released:'Reservation removed',jericho_request_approved:'Request approved',jericho_request_rejected:'Request denied',parking_space_updated:'Parking space updated'};
+ return labels[action]||safeText(action).replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
+function historyDetails(value){
+ if(typeof value==='string')return value;
+ if(!value||typeof value!=='object')return '—';
+ const parts=[];
+ if(value.resident_name)parts.push(safeText(value.resident_name));
+ if(value.apartment_number)parts.push('Apartment '+value.apartment_number);
+ if(value.spot_id)parts.push('Space '+value.spot_id);
+ if(value.license_plate)parts.push('Plate '+value.license_plate);
+ if(value.old_name!==undefined&&value.new_name!==undefined&&value.old_name!==value.new_name)parts.push('Name: '+value.old_name+' → '+value.new_name);
+ if(value.old_unavailable!==undefined&&value.new_unavailable!==undefined&&value.old_unavailable!==value.new_unavailable)parts.push('Availability: '+(value.new_unavailable?'Unavailable':'Available'));
+ if(value.geometry_changed)parts.push('Position updated');
+ for(const [key,val] of Object.entries(value)){
+  if(['resident_name','apartment_number','spot_id','license_plate','old_name','new_name','old_unavailable','new_unavailable','geometry_changed'].includes(key))continue;
+  if(val===null||typeof val==='object')continue;
+  parts.push(key.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())+': '+String(val));
+ }
+ return parts.join(' · ')||'—';
+}
 async function loadLogs(){
  if(!manager())return;
  const [lr,rr,pr]=await Promise.all([
@@ -197,11 +220,28 @@ async function loadLogs(){
   client.from('profiles').select('id,email')]);
  if(lr.error||rr.error){toast((lr.error||rr.error).message,true);return}
  const emails=Object.fromEntries((pr.data||[]).map(p=>[p.id,p.email]));
- const actions=(lr.data||[]).filter(x=>!['jericho_request_approved','jericho_request_rejected'].includes(x.action)).map(x=>({time:x.occurred_at,action:x.action,actor:emails[x.actor_id]||x.actor_id||'System',details:JSON.stringify(x.details||{}),type:x.action.includes('employee')||x.action.includes('profile')?'employees':'parking'}));
- const requests=(rr.data||[]).map(x=>({time:x.reviewed_at||x.created_at,action:x.status==='approved'?'Request approved':x.status==='released'?'Assignment released':'Request denied',actor:emails[x.reviewed_by]||'Manager',details:`${x.resident_name} · Apartment ${x.apartment_number} · ${x.spot_id} · Plate ${x.license_plate}`,type:'requests'}));
+ // These events already appear as a single, more complete row from jericho_requests.
+ const mirrored=new Set(['jericho_request_approved','jericho_request_rejected','jericho_assignment_released']);
+ const actions=(lr.data||[]).filter(x=>!mirrored.has(x.action)).map(x=>({
+  time:x.occurred_at,action:historyActionLabel(x.action),actor:emails[x.actor_id]||x.actor_id||'System',
+  details:historyDetails(x.details),type:x.action.includes('employee')||x.action.includes('profile')?'employees':'parking'
+ }));
+ const requests=(rr.data||[]).map(x=>({
+  time:x.reviewed_at||x.created_at,
+  action:x.status==='approved'?'Request approved':x.status==='released'?'Reservation removed':'Request denied',
+  actor:emails[x.reviewed_by]||'Manager',
+  details:historyDetails({resident_name:x.resident_name,apartment_number:x.apartment_number,spot_id:x.spot_id,license_plate:x.license_plate}),
+  type:'requests'
+ }));
  historyItems=[...actions,...requests].sort((a,b)=>new Date(b.time)-new Date(a.time));renderHistory();
 }
-function renderHistory(){const query=$('historySearch').value.trim().toLowerCase(),filter=$('historyFilter').value,rows=$('historyRows');rows.replaceChildren();const filtered=historyItems.filter(x=>(filter==='all'||x.type===filter)&&[x.action,x.actor,x.details,x.time].join(' ').toLowerCase().includes(query));for(const x of filtered){const tr=el('tr');[stamp(x.time),x.action,x.actor,x.details].forEach(v=>tr.append(el('td',v)));rows.append(tr)}if(!filtered.length){const tr=el('tr'),td=el('td','No matching history records');td.colSpan=4;tr.append(td);rows.append(tr)}}
+function renderHistory(){
+ const query=$('historySearch').value.trim().toLowerCase(),filter=$('historyFilter').value,rows=$('historyRows');
+ rows.replaceChildren();
+ const filtered=historyItems.filter(x=>(filter==='all'||x.type===filter)&&[x.action,x.actor,x.details,x.time].join(' ').toLowerCase().includes(query));
+ for(const x of filtered){const tr=el('tr');[stamp(x.time),x.action,x.actor,x.details].forEach(v=>tr.append(el('td',v)));rows.append(tr)}
+ if(!filtered.length){const tr=el('tr'),td=el('td','No matching history records');td.colSpan=4;tr.append(td);rows.append(tr)}
+}
 $('historySearch').addEventListener('input',renderHistory);$('historyFilter').onchange=renderHistory;$('refreshHistory').onclick=loadLogs;
 async function loadTeam(){if(!manager())return;const {data,error}=await client.from('profiles').select('id,email,role,active').order('email');if(error)return toast(error.message,true);team=data||[];const rows=$('teamRows');rows.replaceChildren();for(const x of team){const tr=el('tr');[x.email,x.role,x.active?'Yes':'No'].forEach(v=>tr.append(el('td',v)));const td=el('td');if(x.id!==session.user.id){const reset=el('button','Send reset');reset.onclick=()=>manageEmployee('reset',x);td.append(reset);const edit=el('button','Edit email');edit.onclick=()=>manageEmployee('email',x);td.append(edit);const role=el('button',x.role==='manager'?'Make staff':'Make manager');role.onclick=()=>manageEmployee('role',x,{role:x.role==='manager'?'employee':'manager'});td.append(role);const active=el('button',x.active?'Deactivate':'Reactivate');active.onclick=()=>manageEmployee('active',x,{active:!x.active});td.append(active)}else td.textContent='Your account';tr.append(td);rows.append(tr)}}
 async function manageEmployee(action,employee,extra={}){if(!manager())return;let body={action,userId:employee.id,...extra};if(action==='email'){const email=prompt('New employee email address',employee.email);if(email===null)return;body.email=email.trim()}if(!confirm(`${action==='reset'?'Send password reset to':action==='email'?'Change email for':'Update'} ${employee.email}?`))return;const {data,error}=await client.functions.invoke('manage-employee',{body});if(error||!data?.success)return toast('Employee update failed: '+(data?.error||error?.message||'Unknown error')+'. Deploy the manage-employee Edge Function.',true);toast(data.message||'Employee updated');await loadTeam()}
