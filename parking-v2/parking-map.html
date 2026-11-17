@@ -124,6 +124,7 @@ const lots={100:{image:'IMG_0475.jpeg',sections:[['Left',14],['Right',10]]},200:
 const totals={100:24,200:47,300:18,400:42,500:147};
 const abbrev={'Left':'L','Right':'R','Middle A':'MA','Middle B':'MB','Side street':'S'};
 let selected=null,section=0,spot=null,unavailable={};
+let requestSubmitting=false;
 const key='jericho-278-preview-availability-v1';
 unavailable={};
 const $=id=>document.getElementById(id);
@@ -185,7 +186,7 @@ function renderDetail(){
  if(unavailable[spot]){$('detail').innerHTML=header+`<p>No occupant information is recorded for this unavailable space.</p><button id="makeAvailable">Mark Available</button>`;$('makeAvailable').onclick=()=>{if(window.jerichoRole!=='manager')return notify('Only managers can change availability.');delete unavailable[spot];save();renderSections();notify('Unsaved change — open Settings and click Save Changes.')};return}
  $('detail').innerHTML=header+`<p>No occupant assigned.</p><button id="newRequest" class="success">Create New Request</button><button id="blockSpot">Mark Unavailable</button><div id="requestForm"></div>`;
  $('blockSpot').onclick=()=>{if(window.jerichoRole!=='manager')return notify('Only managers can change availability.');unavailable[spot]=true;save();renderSections();notify('Unsaved change — open Settings and click Save Changes.')};
- $('newRequest').onclick=()=>{$('requestForm').innerHTML=`<form id="requestFields"><label>Resident name<input id="residentName" required maxlength="100" autocomplete="off"></label><label>Apartment number<input id="apartment" required maxlength="30" autocomplete="off"></label><label>License plate<input id="plate" required maxlength="30" autocomplete="off"></label><label>Sticker #<input id="stickerNumber" required maxlength="50" autocomplete="off"></label><label>Request notes (optional)<input id="requestNotes" maxlength="200"></label><p><button type="submit" class="success">Submit Request</button></p></form>`;$('requestFields').onsubmit=e=>{e.preventDefault();const name=$('residentName').value.trim(),apartment=$('apartment').value.trim(),plate=$('plate').value.trim().toUpperCase(),sticker=$('stickerNumber').value.trim(),notes=$('requestNotes').value.trim();if(!name||!apartment||!plate||!sticker)return alert('Resident name, apartment, license plate, and Sticker # are required.');const duplicate=Object.entries(records).find(([id,r])=>id!==spot&&(r.plate.toUpperCase()===plate||(r.name.toLowerCase()===name.toLowerCase()&&r.apartment.toLowerCase()===apartment.toLowerCase())));if(duplicate)return alert('This license plate or resident/apartment already has a preview request at '+duplicate[0]);if(!window.jerichoRole)return notify('Please sign in through the main website first.');window.parent.postMessage({kind:'jericho-create-request',spot,name,apartment,plate,sticker,notes},location.origin);notify('Submitting request…')};};
+ $('newRequest').onclick=()=>{$('requestForm').innerHTML=`<form id="requestFields"><label>Resident name<input id="residentName" required maxlength="100" autocomplete="off"></label><label>Apartment number<input id="apartment" required maxlength="30" autocomplete="off"></label><label>License plate<input id="plate" required maxlength="30" autocomplete="off"></label><label>Sticker #<input id="stickerNumber" required maxlength="50" autocomplete="off"></label><label>Request notes (optional)<input id="requestNotes" maxlength="200"></label><p><button type="submit" class="success">Submit Request</button></p></form>`;$('requestFields').onsubmit=e=>{e.preventDefault();const name=$('residentName').value.trim(),apartment=$('apartment').value.trim(),plate=$('plate').value.trim().toUpperCase(),sticker=$('stickerNumber').value.trim(),notes=$('requestNotes').value.trim();if(!name||!apartment||!plate||!sticker)return alert('Resident name, apartment, license plate, and Sticker # are required.');const duplicate=Object.entries(records).find(([id,r])=>id!==spot&&(r.plate.toUpperCase()===plate||(r.name.toLowerCase()===name.toLowerCase()&&r.apartment.toLowerCase()===apartment.toLowerCase())));if(duplicate)return alert('This license plate or resident/apartment already has a preview request at '+duplicate[0]);if(!window.jerichoRole)return notify('Please sign in through the main website first.');requestSubmitting=true;const submitButton=$('requestFields').querySelector('button[type=submit]');submitButton.disabled=true;submitButton.textContent='Submitting…';window.parent.postMessage({kind:'jericho-create-request',spot,name,apartment,plate,sticker,notes},location.origin);notify('Submitting request…')};};
 }
 
 
@@ -404,6 +405,24 @@ window.addEventListener('message',e=>{
   }
   if(!window.jerichoSaving && !window.jerichoDirty)window.jerichoDirty=false;
  }else if(m.kind==='jericho-result'){
+  if(requestSubmitting){
+   requestSubmitting=false;
+   if(m.ok){
+    const formArea=document.getElementById('requestForm');
+    if(formArea){
+     const createButton=document.getElementById('newRequest');
+     if(createButton)createButton.classList.add('hidden');
+     formArea.innerHTML='<div role="status" style="padding:20px 14px;text-align:center;border:1px solid #a7d8bb;border-radius:12px;background:#f0fbf5;color:#176747"><div style="font-size:32px;margin-bottom:8px">✓</div><strong style="color:#176747">Request Submitted!</strong><p style="margin-bottom:0;color:#315e49">Your parking reservation request was submitted successfully and is awaiting manager approval.</p></div>';
+    }
+    notify('');
+    window.parent.postMessage({kind:'jericho-refresh'},location.origin);
+   }else{
+    const submitButton=document.querySelector('#requestFields button[type=submit]');
+    if(submitButton){submitButton.disabled=false;submitButton.textContent='Submit Request'}
+    notify(m.message||'Request failed. Please try again.');
+   }
+   return;
+  }
   notify(m.message||'Updated');
   const btn=document.getElementById('saveLayout');if(btn){btn.textContent='✓ Save Changes';btn.classList.remove('saved')}
   window.jerichoSaving=false;
