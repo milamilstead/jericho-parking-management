@@ -269,10 +269,10 @@ async function sendJerichoState(){
   client.from('jericho_spaces').select('id,display_name,geometry,unavailable,spot_type'),
   client.from('jericho_requests').select('spot_id,resident_name,apartment_number,license_plate,sticker_number,notes,status').in('status',['pending','approved'])]);
  if(sr.error||rr.error){toast('Run 04_jericho_278_migration.sql in Supabase before using the new map: '+(sr.error?.message||rr.error?.message),true);return}
- const positions={},spotNames={},spotTypes={},unavailable={},records={};
+ const positions={},spotNames={},spotTypes={},unavailable={},records={},pendingRequests={};
  for(const s of sr.data||[]){if(s.geometry&&Object.keys(s.geometry).length===4)positions[s.id]=s.geometry;if(s.display_name!==s.id)spotNames[s.id]=s.display_name;if(s.spot_type&&s.spot_type!=='standard')spotTypes[s.id]=s.spot_type;if(s.unavailable)unavailable[s.id]=true}
- for(const r of rr.data||[])if(r.status==='approved')records[r.spot_id]={name:r.resident_name,apartment:r.apartment_number,plate:r.license_plate,sticker:r.sticker_number,notes:r.notes,requestStatus:r.status};
- jerichoFrame.contentWindow.postMessage({kind:'jericho-state',role:profile.role,positions,spotNames,spotTypes,unavailable,records},location.origin);
+ for(const r of rr.data||[]){if(r.status==='approved')records[r.spot_id]={name:r.resident_name,apartment:r.apartment_number,plate:r.license_plate,sticker:r.sticker_number,notes:r.notes,requestStatus:r.status};else if(r.status==='pending')pendingRequests[r.spot_id]=true;}
+ jerichoFrame.contentWindow.postMessage({kind:'jericho-state',role:profile.role,positions,spotNames,spotTypes,unavailable,records,pendingRequests},location.origin);
 }
 window.addEventListener('message',async e=>{
  if(e.origin!==location.origin||e.source!==jerichoFrame.contentWindow||!staff())return;
