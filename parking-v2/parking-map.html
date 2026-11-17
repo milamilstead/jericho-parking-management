@@ -325,6 +325,7 @@ $('saveLayout').onclick=()=>{
  saveAll();
  $('saveLayout').textContent='Saving…';
  $('saveLayout').classList.add('saved');
+ window.jerichoSaving=true;
  window.parent.postMessage({kind:'jericho-save-layout',positions,spotNames,spotTypes,unavailable},location.origin);notify('Saving layout to the shared database…');
  
 };
@@ -372,7 +373,7 @@ $('searchInput').oninput=renderSearch;
 $('back').onclick=overview;overview();
 </script>
 <script>
-window.jerichoRole=null;window.jerichoDirty=false;
+window.jerichoRole=null;window.jerichoDirty=false;window.jerichoSaving=false;
 window.addEventListener('message',e=>{
  if(e.origin!==location.origin||e.source!==window.parent)return;
  const m=e.data||{};
@@ -380,7 +381,12 @@ window.addEventListener('message',e=>{
  if(m.kind==='jericho-state'){
   document.getElementById('authGate')?.remove();
   window.jerichoRole=m.role==='manager'?'manager':'employee';
-  records=m.records||{};positions=m.positions||{};spotNames=m.spotNames||{};spotTypes=m.spotTypes||{};unavailable=m.unavailable||{};
+  // Preserve unsaved manager edits while background data refreshes.
+  // Occupancy records can still refresh independently.
+  records=m.records||{};
+  if(!window.jerichoDirty && !window.jerichoSaving){
+   positions=m.positions||{};spotNames=m.spotNames||{};spotTypes=m.spotTypes||{};unavailable=m.unavailable||{};
+  }
   document.getElementById('editToolbar').style.display=window.jerichoRole==='manager'?'':'none';
   document.getElementById('editMode').disabled=window.jerichoRole!=='manager';
   document.getElementById('saveLayout').disabled=window.jerichoRole!=='manager';
@@ -388,11 +394,13 @@ window.addEventListener('message',e=>{
   document.getElementById('importData').disabled=true;
   if(window.jerichoRole!=='manager'&&editMode)document.getElementById('editMode').click();
   if(selected)renderSections();else renderStats();
-  window.jerichoDirty=false;
+  if(!window.jerichoSaving && !window.jerichoDirty)window.jerichoDirty=false;
  }else if(m.kind==='jericho-result'){
   notify(m.message||'Updated');
   const btn=document.getElementById('saveLayout');if(btn){btn.textContent='✓ Save Changes';btn.classList.remove('saved')}
-  if(m.ok)window.parent.postMessage({kind:'jericho-refresh'},location.origin);
+  window.jerichoSaving=false;
+  if(m.ok){window.jerichoDirty=false;window.parent.postMessage({kind:'jericho-refresh'},location.origin)}
+  else {window.jerichoDirty=true;notify((m.message||'Save failed')+' — your edits are still on this page. Try saving again.')}
  }
 });
 if(window.parent===window){
