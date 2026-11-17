@@ -393,7 +393,15 @@ window.addEventListener('message',e=>{
   document.getElementById('resetLot').disabled=window.jerichoRole!=='manager';
   document.getElementById('importData').disabled=true;
   if(window.jerichoRole!=='manager'&&editMode)document.getElementById('editMode').click();
-  if(selected)renderSections();else renderStats();
+  // Background updates must not replace an open reservation form or erase typed values.
+  // Refresh the availability counters without rebuilding the form.
+  if(selected && document.getElementById('requestFields')){
+   renderStats();
+  }else if(selected){
+   renderSections();
+  }else{
+   renderStats();
+  }
   if(!window.jerichoSaving && !window.jerichoDirty)window.jerichoDirty=false;
  }else if(m.kind==='jericho-result'){
   notify(m.message||'Updated');
