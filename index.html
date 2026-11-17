@@ -202,11 +202,12 @@ function historyDetails(value){
  if(value.apartment_number)parts.push('Apartment '+value.apartment_number);
  if(value.spot_id)parts.push('Space '+value.spot_id);
  if(value.license_plate)parts.push('Plate '+value.license_plate);
+  if(value.sticker_number)parts.push('Sticker # '+value.sticker_number);
  if(value.old_name!==undefined&&value.new_name!==undefined&&value.old_name!==value.new_name)parts.push('Name: '+value.old_name+' → '+value.new_name);
  if(value.old_unavailable!==undefined&&value.new_unavailable!==undefined&&value.old_unavailable!==value.new_unavailable)parts.push('Availability: '+(value.new_unavailable?'Unavailable':'Available'));
  if(value.geometry_changed)parts.push('Position updated');
  for(const [key,val] of Object.entries(value)){
-  if(['resident_name','apartment_number','spot_id','license_plate','old_name','new_name','old_unavailable','new_unavailable','geometry_changed'].includes(key))continue;
+  if(['resident_name','apartment_number','spot_id','license_plate','sticker_number','old_name','new_name','old_unavailable','new_unavailable','geometry_changed'].includes(key))continue;
   if(val===null||typeof val==='object')continue;
   parts.push(key.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())+': '+String(val));
  }
@@ -216,7 +217,7 @@ async function loadLogs(){
  if(!manager())return;
  const [lr,rr,pr]=await Promise.all([
   client.from('activity_logs').select('occurred_at,action,actor_id,details').order('occurred_at',{ascending:false}).limit(500),
-  client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,status,created_at,reviewed_at,reviewed_by').in('status',['approved','rejected','released']).order('created_at',{ascending:false}).limit(500),
+  client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,status,created_at,reviewed_at,reviewed_by').in('status',['approved','rejected','released']).order('created_at',{ascending:false}).limit(500),
   client.from('profiles').select('id,email')]);
  if(lr.error||rr.error){toast((lr.error||rr.error).message,true);return}
  const emails=Object.fromEntries((pr.data||[]).map(p=>[p.id,p.email]));
@@ -230,7 +231,7 @@ async function loadLogs(){
   time:x.reviewed_at||x.created_at,
   action:x.status==='approved'?'Request approved':x.status==='released'?'Reservation removed':'Request denied',
   actor:emails[x.reviewed_by]||'Manager',
-  details:historyDetails({resident_name:x.resident_name,apartment_number:x.apartment_number,spot_id:x.spot_id,license_plate:x.license_plate}),
+  details:historyDetails({resident_name:x.resident_name,apartment_number:x.apartment_number,spot_id:x.spot_id,license_plate:x.license_plate,sticker_number:x.sticker_number}),
   type:'requests'
  }));
  historyItems=[...actions,...requests].sort((a,b)=>new Date(b.time)-new Date(a.time));renderHistory();
@@ -266,12 +267,12 @@ async function sendJerichoState(){
  if(!staff()||!jerichoFrame.contentWindow)return;
  const [sr,rr]=await Promise.all([
   client.from('jericho_spaces').select('id,display_name,geometry,unavailable,spot_type'),
-  client.from('jericho_requests').select('spot_id,resident_name,apartment_number,license_plate,notes,status').in('status',['pending','approved'])]);
+  client.from('jericho_requests').select('spot_id,resident_name,apartment_number,license_plate,sticker_number,notes,status').in('status',['pending','approved'])]);
  if(sr.error||rr.error){toast('Run 04_jericho_278_migration.sql in Supabase before using the new map: '+(sr.error?.message||rr.error?.message),true);return}
- const positions={},spotNames={},spotTypes={},unavailable={},records={};
+ const positions={},spotNames={},spotTypes={},unavailable={},records={},pendingRequests={};
  for(const s of sr.data||[]){if(s.geometry&&Object.keys(s.geometry).length===4)positions[s.id]=s.geometry;if(s.display_name!==s.id)spotNames[s.id]=s.display_name;if(s.spot_type&&s.spot_type!=='standard')spotTypes[s.id]=s.spot_type;if(s.unavailable)unavailable[s.id]=true}
- for(const r of rr.data||[])if(r.status==='approved')records[r.spot_id]={name:r.resident_name,apartment:r.apartment_number,plate:r.license_plate,notes:r.notes,requestStatus:r.status};
- jerichoFrame.contentWindow.postMessage({kind:'jericho-state',role:profile.role,positions,spotNames,spotTypes,unavailable,records},location.origin);
+ for(const r of rr.data||[]){if(r.status==='approved')records[r.spot_id]={name:r.resident_name,apartment:r.apartment_number,plate:r.license_plate,sticker:r.sticker_number,notes:r.notes,requestStatus:r.status};else if(r.status==='pending')pendingRequests[r.spot_id]=true;}
+ jerichoFrame.contentWindow.postMessage({kind:'jericho-state',role:profile.role,positions,spotNames,spotTypes,unavailable,records,pendingRequests},location.origin);
 }
 window.addEventListener('message',async e=>{
  if(e.origin!==location.origin||e.source!==jerichoFrame.contentWindow||!staff())return;
@@ -299,8 +300,8 @@ window.addEventListener('message',async e=>{
  }
  if(m.kind==='jericho-create-request'){
   const id=String(m.spot||'');if(!/^(100|200|300|400|500)-(L|R|MA|MB|S)[0-9]{2}$/.test(id))return reply(false,'Invalid spot');
-  const payload={spot_id:id,resident_name:String(m.name||'').trim().slice(0,100),apartment_number:String(m.apartment||'').trim().slice(0,30),license_plate:String(m.plate||'').trim().toUpperCase().slice(0,30),notes:String(m.notes||'').trim().slice(0,200),created_by:session.user.id};
-  if(!payload.resident_name||!payload.apartment_number||!payload.license_plate)return reply(false,'Fill in all required fields.');
+  const payload={spot_id:id,resident_name:String(m.name||'').trim().slice(0,100),apartment_number:String(m.apartment||'').trim().slice(0,30),license_plate:String(m.plate||'').trim().toUpperCase().slice(0,30),sticker_number:String(m.sticker||'').trim().slice(0,50),notes:String(m.notes||'').trim().slice(0,200),created_by:session.user.id};
+  if(!payload.resident_name||!payload.apartment_number||!payload.license_plate||!payload.sticker_number)return reply(false,'Resident name, apartment, license plate, and Sticker # are required.');
   const {error}=await client.from('jericho_requests').insert(payload);
   return reply(!error,error?'Request failed: '+error.message:'Request submitted to Supabase for review.');
  }
@@ -310,15 +311,15 @@ setInterval(()=>{if(staff()&&view==='layouts')sendJerichoState()},20000);
 
 async function loadJerichoRequests(){
  if(!staff())return;
- const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,status,created_at').eq('status','pending').order('created_at',{ascending:false}).limit(300);
+ const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,status,created_at').eq('status','pending').order('created_at',{ascending:false}).limit(300);
  const box=$('jerichoRequestList');box.replaceChildren();
  if(error){box.textContent=error.message;return}
  const table=el('table');table.className='simple-table';
- const head=el('thead'),hr=el('tr');for(const k of ['Spot','Resident','Apartment','Plate','Status','Submitted','Review'])hr.append(el('th',k));head.append(hr);table.append(head);
+ const head=el('thead'),hr=el('tr');for(const k of ['Spot','Resident','Apartment','Plate','Sticker #','Status','Submitted','Review'])hr.append(el('th',k));head.append(hr);table.append(head);
  const body=el('tbody');
  if(!(data||[]).length){box.textContent='No pending requests. You are all caught up.';return}
  for(const r of data||[]){
-  const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,r.status,stamp(r.created_at)])tr.append(el('td',v));
+  const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,r.sticker_number||'—',r.status,stamp(r.created_at)])tr.append(el('td',v));
   const actions=el('td');if(manager()&&r.status==='pending'){
    for(const status of ['approved','rejected']){
     const b=el('button',status==='approved'?'Approve':'Reject');b.style.margin='3px';
@@ -333,6 +334,6 @@ async function loadJerichoRequests(){
  }table.append(body);box.append(table);
 }
 $('refreshJerichoRequests').onclick=loadJerichoRequests;
-async function loadActiveJerichoAssignments(){if(!staff())return;const box=$('activeJerichoAssignments');const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,reviewed_at').eq('status','approved').order('reviewed_at',{ascending:false}).limit(500);box.replaceChildren();if(error){box.textContent=error.message;return}if(!data?.length){box.textContent='No active assignments.';return}const table=el('table');table.className='simple-table';const head=el('thead'),hr=el('tr');for(const h of ['Spot','Resident','Apartment','Plate','Approved','Action'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');for(const r of data){const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,stamp(r.reviewed_at)])tr.append(el('td',v));const td=el('td');if(manager()){const b=el('button','Remove Reservation');b.onclick=async()=>{if(!confirm(`Remove the reservation for ${r.resident_name} at ${r.spot_id}? The space will become available immediately, and the action will remain in History.`))return;b.disabled=true;const {error}=await client.rpc('jericho_release_assignment',{p_request_id:r.id});if(error){toast(error.message,true);b.disabled=false}else{toast('Reservation removed — spot available');await loadActiveJerichoAssignments();await sendJerichoState()}};td.append(b)}tr.append(td);body.append(tr)}table.append(body);box.append(table)}
+async function loadActiveJerichoAssignments(){if(!staff())return;const box=$('activeJerichoAssignments');const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,reviewed_at').eq('status','approved').order('reviewed_at',{ascending:false}).limit(500);box.replaceChildren();if(error){box.textContent=error.message;return}if(!data?.length){box.textContent='No active assignments.';return}const table=el('table');table.className='simple-table';const head=el('thead'),hr=el('tr');for(const h of ['Spot','Resident','Apartment','Plate','Sticker #','Approved','Action'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');for(const r of data){const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,r.sticker_number||'—',stamp(r.reviewed_at)])tr.append(el('td',v));const td=el('td');if(manager()){const b=el('button','Remove Reservation');b.onclick=async()=>{if(!confirm(`Remove the reservation for ${r.resident_name} at ${r.spot_id}? The space will become available immediately, and the action will remain in History.`))return;b.disabled=true;const {error}=await client.rpc('jericho_release_assignment',{p_request_id:r.id});if(error){toast(error.message,true);b.disabled=false}else{toast('Reservation removed — spot available');await loadActiveJerichoAssignments();await sendJerichoState()}};td.append(b)}tr.append(td);body.append(tr)}table.append(body);box.append(table)}
 
 </script></body></html>
