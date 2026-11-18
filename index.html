@@ -309,9 +309,34 @@ window.addEventListener('message',async e=>{
 jerichoFrame.addEventListener('load',()=>{applyTheme(chosenTheme());if(staff())sendJerichoState()});
 setInterval(()=>{if(staff()&&view==='layouts')sendJerichoState()},20000);
 
+// Manager-only editor for pending requests and approved reservations.
+async function editJerichoRecord(r, reload){
+ if(!manager())return;
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:#12243a99;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto';
+ const panel=document.createElement('form');
+ panel.style.cssText='background:#fff;color:#24364d;border-radius:14px;padding:24px;width:min(100%,480px);box-shadow:0 18px 55px #0003;display:grid;gap:12px';
+ const heading=el('h2','Edit '+(r.status==='approved'?'Reservation':'Request')+' · '+r.spot_id);panel.append(heading);
+ const fields=[['resident_name','Resident name',100],['apartment_number','Apartment number',30],['license_plate','License plate',30],['sticker_number','Sticker #',50],['notes','Notes',200]];
+ const inputs={};
+ for(const [key,label,max] of fields){const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='display:grid;gap:5px;font-weight:600';const input=document.createElement('input');input.value=r[key]||'';input.maxLength=max;input.required=key!=='notes';input.style.cssText='padding:10px;border:1px solid #b6c9e0;border-radius:8px;font:inherit;width:100%';wrap.append(input);panel.append(wrap);inputs[key]=input}
+ const msg=el('p','');msg.style.color='#b91c1c';panel.append(msg);
+ const actions=document.createElement('div');actions.style.cssText='display:flex;gap:10px;justify-content:flex-end';
+ const cancel=el('button','Cancel');cancel.type='button';cancel.onclick=()=>overlay.remove();
+ const submit=el('button','Save Changes');submit.type='submit';actions.append(cancel,submit);panel.append(actions);overlay.append(panel);document.body.append(overlay);
+ panel.onsubmit=async e=>{
+  e.preventDefault();const values={};for(const [key] of fields)values[key]=inputs[key].value.trim();
+  values.license_plate=values.license_plate.toUpperCase();
+  if(!values.resident_name||!values.apartment_number||!values.license_plate||!values.sticker_number){msg.textContent='All fields except notes are required.';return}
+  submit.disabled=true;cancel.disabled=true;msg.textContent='Saving…';
+  const {error}=await client.rpc('jericho_edit_request',{p_request_id:r.id,p_resident_name:values.resident_name,p_apartment_number:values.apartment_number,p_license_plate:values.license_plate,p_sticker_number:values.sticker_number,p_notes:values.notes});
+  if(error){msg.textContent='Could not save: '+error.message;submit.disabled=false;cancel.disabled=false;return}
+  overlay.remove();toast('Changes saved successfully');await reload();await sendJerichoState();
+ };
+}
 async function loadJerichoRequests(){
  if(!staff())return;
- const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,status,created_at').eq('status','pending').order('created_at',{ascending:false}).limit(300);
+ const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,notes,status,created_at').eq('status','pending').order('created_at',{ascending:false}).limit(300);
  const box=$('jerichoRequestList');box.replaceChildren();
  if(error){box.textContent=error.message;return}
  const table=el('table');table.className='simple-table';
@@ -320,7 +345,7 @@ async function loadJerichoRequests(){
  if(!(data||[]).length){box.textContent='No pending requests. You are all caught up.';return}
  for(const r of data||[]){
   const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,r.sticker_number||'—',r.status,stamp(r.created_at)])tr.append(el('td',v));
-  const actions=el('td');if(manager()&&r.status==='pending'){
+  const actions=el('td');if(manager()&&r.status==='pending'){const edit=el('button','Edit');edit.style.margin='3px';edit.onclick=()=>editJerichoRecord(r,loadJerichoRequests);actions.append(edit);
    for(const status of ['approved','rejected']){
     const b=el('button',status==='approved'?'Approve':'Reject');b.style.margin='3px';
     b.onclick=async()=>{
@@ -334,6 +359,6 @@ async function loadJerichoRequests(){
  }table.append(body);box.append(table);
 }
 $('refreshJerichoRequests').onclick=loadJerichoRequests;
-async function loadActiveJerichoAssignments(){if(!staff())return;const box=$('activeJerichoAssignments');const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,reviewed_at').eq('status','approved').order('reviewed_at',{ascending:false}).limit(500);box.replaceChildren();if(error){box.textContent=error.message;return}if(!data?.length){box.textContent='No active assignments.';return}const table=el('table');table.className='simple-table';const head=el('thead'),hr=el('tr');for(const h of ['Spot','Resident','Apartment','Plate','Sticker #','Approved','Action'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');for(const r of data){const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,r.sticker_number||'—',stamp(r.reviewed_at)])tr.append(el('td',v));const td=el('td');if(manager()){const b=el('button','Remove Reservation');b.onclick=async()=>{if(!confirm(`Remove the reservation for ${r.resident_name} at ${r.spot_id}? The space will become available immediately, and the action will remain in History.`))return;b.disabled=true;const {error}=await client.rpc('jericho_release_assignment',{p_request_id:r.id});if(error){toast(error.message,true);b.disabled=false}else{toast('Reservation removed — spot available');await loadActiveJerichoAssignments();await sendJerichoState()}};td.append(b)}tr.append(td);body.append(tr)}table.append(body);box.append(table)}
+async function loadActiveJerichoAssignments(){if(!staff())return;const box=$('activeJerichoAssignments');const {data,error}=await client.from('jericho_requests').select('id,spot_id,resident_name,apartment_number,license_plate,sticker_number,notes,status,reviewed_at').eq('status','approved').order('reviewed_at',{ascending:false}).limit(500);box.replaceChildren();if(error){box.textContent=error.message;return}if(!data?.length){box.textContent='No active assignments.';return}const table=el('table');table.className='simple-table';const head=el('thead'),hr=el('tr');for(const h of ['Spot','Resident','Apartment','Plate','Sticker #','Approved','Action'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');for(const r of data){const tr=el('tr');for(const v of [r.spot_id,r.resident_name,r.apartment_number,r.license_plate,r.sticker_number||'—',stamp(r.reviewed_at)])tr.append(el('td',v));const td=el('td');if(manager()){const edit=el('button','Edit');edit.style.margin='3px';edit.onclick=()=>editJerichoRecord(r,loadActiveJerichoAssignments);td.append(edit);const b=el('button','Remove Reservation');b.onclick=async()=>{if(!confirm(`Remove the reservation for ${r.resident_name} at ${r.spot_id}? The space will become available immediately, and the action will remain in History.`))return;b.disabled=true;const {error}=await client.rpc('jericho_release_assignment',{p_request_id:r.id});if(error){toast(error.message,true);b.disabled=false}else{toast('Reservation removed — spot available');await loadActiveJerichoAssignments();await sendJerichoState()}};td.append(b)}tr.append(td);body.append(tr)}table.append(body);box.append(table)}
 
 </script></body></html>
